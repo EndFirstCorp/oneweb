@@ -31,7 +31,7 @@ func validateMethod(method reflect.Value, methodName string) (httpVerb string, a
 		return httpVerb, action, nil
 	}
 
-	if !isJsonReturnArgs(methodType) {
+	if !isJSONReturnArgs(methodType) {
 		return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Unsupported return type.  Expected (string, error)")
 	}
 
@@ -40,7 +40,7 @@ func validateMethod(method reflect.Value, methodName string) (httpVerb string, a
 		return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Invalid number of input arguments.  Expected 4 or fewer")
 	}
 
-	validId := isValidId(methodType, numIn, httpVerb)
+	validID := isValidID(methodType, numIn, httpVerb)
 	validAction := isValidAction(methodType, numIn, httpVerb)
 
 	if action != "" && !validAction {
@@ -50,13 +50,13 @@ func validateMethod(method reflect.Value, methodName string) (httpVerb string, a
 			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires either 2 or 3 input args (cr *ControllerRequest, id string, actionFilter string [optional])")
 		}
 	} else if action == "" {
-		if httpVerb == "Post" && numIn == 2 && !isJsonReceiverArg(methodType.In(0)) {
+		if httpVerb == "Post" && numIn == 2 && !isJSONReceiverArg(methodType.In(0)) {
 			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 2 input arg (cr *ControllerRequest, json *YourStruct or []YourStruct)")
-		} else if httpVerb == "Post" && numIn == 3 && !validId {
+		} else if httpVerb == "Post" && numIn == 3 && !validID {
 			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 3 input args (cr *ControllerRequest, id string, json *YourStruct or []YourStruct)")
-		} else if (httpVerb == "Get" || httpVerb == "Delete") && !validId {
+		} else if (httpVerb == "Get" || httpVerb == "Delete") && !validID {
 			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 2 input arg (cr *ControllerRequest, id string)")
-		} else if httpVerb == "Put" && !validId {
+		} else if httpVerb == "Put" && !validID {
 			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 3 input args (cr *ControllerRequest, id string, json *YourStruct or []YourStruct))")
 		} else if httpVerb == "Index" && numIn != 1 {
 			return httpVerb, action, errors.New("Method \"Index\" requires 0 input args")
@@ -75,11 +75,11 @@ func parseMethod(methodName string) (string, string) {
 	return "", ""
 }
 
-func isValidId(methodType reflect.Type, numIn int, httpVerb string) bool {
+func isValidID(methodType reflect.Type, numIn int, httpVerb string) bool {
 	// if there is only an id then you need 2 arg + json
 	return numIn > 1 && isStringArg(methodType.In(1)) &&
 		(httpVerb == "Get" || httpVerb == "Delete") ||
-		numIn == 3 && httpVerb == "Put" && isJsonReceiverArg(methodType.In(2))
+		numIn == 3 && httpVerb == "Put" && isJSONReceiverArg(methodType.In(2))
 }
 
 func isValidAction(methodType reflect.Type, numIn int, httpVerb string) bool {
@@ -87,11 +87,11 @@ func isValidAction(methodType reflect.Type, numIn int, httpVerb string) bool {
 	return numIn > 1 && isStringArg(methodType.In(1)) &&
 		(numIn == 2 && (httpVerb == "Get" || httpVerb == "Delete") ||
 			numIn == 3 && (httpVerb == "Get" || httpVerb == "Delete") && isStringArg(methodType.In(2)) ||
-			numIn == 3 && (httpVerb == "Post" || httpVerb == "Put") && isJsonReceiverArg(methodType.In(2)) ||
-			numIn == 4 && (httpVerb == "Post" || httpVerb == "Put") && isStringArg(methodType.In(2)) && isJsonReceiverArg(methodType.In(3)))
+			numIn == 3 && (httpVerb == "Post" || httpVerb == "Put") && isJSONReceiverArg(methodType.In(2)) ||
+			numIn == 4 && (httpVerb == "Post" || httpVerb == "Put") && isStringArg(methodType.In(2)) && isJSONReceiverArg(methodType.In(3)))
 }
 
-func isJsonReturnArgs(methodType reflect.Type) bool {
+func isJSONReturnArgs(methodType reflect.Type) bool {
 	return methodType.NumOut() == 2 && isStringArg(methodType.Out(0)) && isErrorArg(methodType.Out(1))
 }
 
@@ -111,6 +111,6 @@ func isSlice(item reflect.Type) bool {
 	return item.Kind() == reflect.Slice
 }
 
-func isJsonReceiverArg(argType reflect.Type) bool {
+func isJSONReceiverArg(argType reflect.Type) bool {
 	return isPointer(argType) || isSlice(argType)
 }

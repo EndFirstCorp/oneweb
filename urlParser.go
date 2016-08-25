@@ -11,12 +11,12 @@ type ControllerRequest struct {
 	ControllerFilter string
 	Action           string
 	ActionFilter     string
-	UserId           int
-	HalfAuthId       int
+	UserID           int
+	HalfAuthID       int
 }
 
-func NewControllerRequest(r *http.Request) *ControllerRequest {
-	halfAuthId, userId := getUserIds(r)
+func newControllerRequest(r *http.Request) *ControllerRequest {
+	halfAuthID, userID := getUserIDs(r)
 	urlPath := removeTrailingSlash(r.URL.Path)
 	urlParams := strings.Split(urlPath, "/")
 	controllerName := strings.Title(strings.ToLower(urlParams[1]))
@@ -34,7 +34,7 @@ func NewControllerRequest(r *http.Request) *ControllerRequest {
 	if len(urlParams) >= 5 {
 		actionFilter = urlParams[4]
 	}
-	return &ControllerRequest{controllerName, controllerFilter, action, actionFilter, userId, halfAuthId}
+	return &ControllerRequest{controllerName, controllerFilter, action, actionFilter, userID, halfAuthID}
 }
 
 func removeTrailingSlash(urlPath string) string {
@@ -45,14 +45,14 @@ func removeTrailingSlash(urlPath string) string {
 
 }
 
-func getUserIds(r *http.Request) (int, int) {
-	var halfAuthId, userId int
+func getUserIDs(r *http.Request) (int, int) {
+	var halfAuthID, userID int
 	var err error
-	if halfAuthId, err = strconv.Atoi(r.Header.Get("X-Half-Auth-User-Id")); err != nil {
-		halfAuthId = -1
+	if halfAuthID, err = strconv.Atoi(r.Header.Get("X-Half-Auth-User-Id")); err != nil {
+		halfAuthID = -1
 	}
-	if userId, err = strconv.Atoi(r.Header.Get("X-User-Id")); err != nil {
-		userId = -1
+	if userID, err = strconv.Atoi(r.Header.Get("X-User-Id")); err != nil {
+		userID = -1
 	}
-	return halfAuthId, userId
+	return halfAuthID, userID
 }

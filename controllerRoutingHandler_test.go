@@ -104,9 +104,9 @@ func TestCallRawGetMethod(t *testing.T) {
 	router := NewControllerRoutingHandler()
 	router.RegisterController("Test", &MockController{})
 	writer := httptest.NewRecorder()
-	parsedUrl := &ControllerRequest{ControllerFilter: "1234", Action: "Rawmethod"}
+	req := &ControllerRequest{ControllerFilter: "1234", Action: "Rawmethod"}
 	method := router.getMethod("Test", "GetRawmethod")
-	callRawMethod(parsedUrl, method, writer, &http.Request{})
+	callRawMethod(req, method, writer, &http.Request{})
 	if writer.Body.String() != "called raw GET method" {
 		t.Fatal("expected to call raw method")
 	}
@@ -114,11 +114,11 @@ func TestCallRawGetMethod(t *testing.T) {
 
 func TestCallRawPostMethod(t *testing.T) {
 	writer := httptest.NewRecorder()
-	parsedUrl := ControllerRequest{}
+	req := ControllerRequest{}
 	router := NewControllerRoutingHandler()
 	router.RegisterController("Test", &MockController{})
 	method := router.getMethod("Test", "Post")
-	callRawMethod(&parsedUrl, method, writer, &http.Request{})
+	callRawMethod(&req, method, writer, &http.Request{})
 	if writer.Body.String() != "called raw POST method" {
 		t.Fatal("expected to call raw method")
 	}
@@ -131,14 +131,14 @@ type SimpleData struct {
 func TestGetJsonBody(t *testing.T) {
 	router := getMockRouter()
 	method := router.getMethod("Projects", "Put")
-	data, err := getJsonBody(&http.Request{Method: "PUT", Body: ioutil.NopCloser(bytes.NewBufferString(`{ "hello": "there" }`))}, method)
+	data, err := getJSONBody(&http.Request{Method: "PUT", Body: ioutil.NopCloser(bytes.NewBufferString(`{ "hello": "there" }`))}, method)
 	if err != nil || data.(*SimpleData).Hello != "there" {
 		t.Fatal("expected json object with property hello and value there")
 	}
 }
 
 func TestGetJsonBodyNotPostOrPut(t *testing.T) {
-	data, err := getJsonBody(&http.Request{Method: "GET", Body: ioutil.NopCloser(bytes.NewBufferString(`{ "hello": "there" }`))}, nil)
+	data, err := getJSONBody(&http.Request{Method: "GET", Body: ioutil.NopCloser(bytes.NewBufferString(`{ "hello": "there" }`))}, nil)
 	if data != nil || err != nil {
 		t.Fatal("expected empty return values")
 	}
@@ -147,7 +147,7 @@ func TestGetJsonBodyNotPostOrPut(t *testing.T) {
 func TestGetJsonErrors(t *testing.T) {
 	router := getMockRouter()
 	method := router.getMethod("Projects", "Post")
-	_, err := getJsonBody(&http.Request{Method: "POST", Body: &MockErroringReadCloser{}}, method)
+	_, err := getJSONBody(&http.Request{Method: "POST", Body: &MockErroringReadCloser{}}, method)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -214,9 +214,9 @@ func TestCheckRuntimeArgumentsSuccess(t *testing.T) {
 
 func TestCheckRuntimeArgumentsFail(t *testing.T) {
 	router := getMockRouter()
-	parsedUrl := &ControllerRequest{ControllerName: "Tests", ControllerFilter: "1234"}
-	args := []reflect.Value{reflect.ValueOf(parsedUrl), reflect.ValueOf("1234")}
-	err := checkRuntimeArguments(router.getMethod("Projects", "Put"), args, "Put", "PUT", parsedUrl)
+	req := &ControllerRequest{ControllerName: "Tests", ControllerFilter: "1234"}
+	args := []reflect.Value{reflect.ValueOf(req), reflect.ValueOf("1234")}
+	err := checkRuntimeArguments(router.getMethod("Projects", "Put"), args, "Put", "PUT", req)
 	if err == nil || err.Error() != "Invalid Url to call method: \"Put\"" {
 		t.Fatal("Expected to have Invalid Url error: ", err)
 	}

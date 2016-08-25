@@ -14,7 +14,7 @@ type TestRunner interface {
 type MethodTestResult struct {
 	MethodName               string
 	ValidationError          error
-	HasInvalidSqlQueryParams bool
+	HasInvalidSQLQueryParams bool
 	ReturnData               []interface{}
 }
 
@@ -61,10 +61,9 @@ func callMethod(method reflect.Value) []reflect.Value {
 		args := []reflect.Value{reflect.ValueOf(&ControllerRequest{}), reflect.ValueOf(writer), reflect.ValueOf(&http.Request{})}
 		method.Call(args)
 		return []reflect.Value{reflect.ValueOf(writer.Body.String())}
-	} else {
-		args := getArgs(method)
-		return method.Call(args)
 	}
+	args := getArgs(method)
+	return method.Call(args)
 }
 
 func getArgs(method reflect.Value) []reflect.Value {

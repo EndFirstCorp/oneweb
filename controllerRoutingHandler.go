@@ -29,7 +29,7 @@ func (c *ControllerRoutingHandler) Handler() http.Handler {
 }
 
 func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWriter, r *http.Request) {
-	cr := NewControllerRequest(r)
+	cr := newControllerRequest(r)
 
 	methodName := getMethodName(r.Method, cr)
 	method := c.getMethod(cr.ControllerName, methodName)
@@ -43,7 +43,7 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 		return
 	}
 
-	json, err := getJsonBody(r, method)
+	json, err := getJSONBody(r, method)
 	if err != nil {
 		http.Error(rw, "Failed to read JSON data: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -104,7 +104,7 @@ func (c *ControllerRoutingHandler) getMethod(controllerName string, methodName s
 	return c.controllerMethods[controllerName+methodName]
 }
 
-func getJsonBody(r *http.Request, method *reflect.Value) (interface{}, error) {
+func getJSONBody(r *http.Request, method *reflect.Value) (interface{}, error) {
 	if r.Method == "POST" || r.Method == "PUT" {
 		outType := method.Type().In(method.Type().NumIn() - 1)
 		pointer := isPointer(outType)
@@ -129,7 +129,7 @@ func getJsonBody(r *http.Request, method *reflect.Value) (interface{}, error) {
 }
 
 func getRequestArguments(httpVerb string, cr *ControllerRequest, json interface{}) []reflect.Value {
-	var args []reflect.Value = nil
+	var args []reflect.Value
 	if cr.ControllerFilter == "" {
 		args = []reflect.Value{reflect.ValueOf(cr)}
 	} else if cr.ActionFilter == "" {
