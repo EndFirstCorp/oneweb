@@ -7,12 +7,12 @@ import (
 )
 
 type ControllerRequest struct {
-	ControllerName   string
-	ControllerFilter string
-	Action           string
-	ActionFilter     string
-	UserID           int
-	HalfAuthID       int
+	ControllerName string
+	ItemID         string
+	Action         string
+	ActionFilter   string
+	UserID         int
+	HalfAuthID     int
 }
 
 func newControllerRequest(r *http.Request) *ControllerRequest {

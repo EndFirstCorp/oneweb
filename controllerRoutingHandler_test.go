@@ -23,9 +23,10 @@ func TestRegisterController(t *testing.T) {
 	router := NewControllerRoutingHandler()
 	err := router.RegisterController("projects", &MockController{})
 	expectedErr := `Method "Bogus" error: Unsupported http verb: ""
+Method "GetBogus" error: Requires 1 input arg (cr *ControllerRequest)
 Method "GetTooFewReturns" error: Unsupported return type.  Expected (string, error)
 Method "GetWrongReturnType" error: Unsupported return type.  Expected (string, error)
-Method "PutBogus" error: Requires either 3 or 4 input args (cr *ControllerRequest, id string, actionFilter string [optional], json *YourStruct or []YourStruct)
+Method "PutBogus" error: Requires 2 input args (cr *ControllerRequest, json *YourStruct or []YourStruct)
 `
 	if len(router.controllerMethods) != 8 || expectedErr != err.Error() {
 		t.Fatal("expected 8 valid controller methods with errors for other 5: ", err)
@@ -41,7 +42,7 @@ func TestWriteResponse(t *testing.T) {
 }
 
 func TestGetMethodName(t *testing.T) {
-	method := getMethodName("GET", &ControllerRequest{ControllerName: "projects", ControllerFilter: "123", Action: "Stuff"})
+	method := getMethodName("GET", &ControllerRequest{ControllerName: "projects", ItemID: "123", Action: "Stuff"})
 	if method != "GetStuff" {
 		t.Fatal("expected GetStuff method.  Actual: ", method)
 	}
@@ -104,7 +105,7 @@ func TestCallRawGetMethod(t *testing.T) {
 	router := NewControllerRoutingHandler()
 	router.RegisterController("Test", &MockController{})
 	writer := httptest.NewRecorder()
-	req := &ControllerRequest{ControllerFilter: "1234", Action: "Rawmethod"}
+	req := &ControllerRequest{ItemID: "1234", Action: "Rawmethod"}
 	method := router.getMethod("Test", "GetRawmethod")
 	callRawMethod(req, method, writer, &http.Request{})
 	if writer.Body.String() != "called raw GET method" {
@@ -161,30 +162,35 @@ func TestGetArgumentsForIndexPage(t *testing.T) {
 }
 
 func TestGetArgumentsWithFilter(t *testing.T) {
-	args := getRequestArguments("GET", &ControllerRequest{ControllerFilter: "1234"}, "1234")
-	if len(args) != 2 || (args)[1].String() != "1234" {
-		t.Fatal("expected 1 arguments with value 1234.  Actual:", args)
+	cr := &ControllerRequest{ItemID: "1234"}
+	args := getRequestArguments("GET", cr, nil)
+	if len(args) != 1 || (args)[0].Interface() != cr {
+		t.Fatal("expected 1 arguments with value cr.  Actual:", args)
 	}
 }
 
 func TestGetArgumentsWithFilterAndQueryFilter(t *testing.T) {
-	args := getRequestArguments("GET", &ControllerRequest{ControllerFilter: "1234", Action: "Stuff", ActionFilter: "4567"}, "1234")
-	if len(args) != 3 || (args)[1].String() != "1234" || args[2].String() != "4567" {
-		t.Fatal("expected 2 arguments with value 1234 and 4567.  Actual:", args)
+	cr := &ControllerRequest{ItemID: "1234", Action: "Stuff", ActionFilter: "4567"}
+	args := getRequestArguments("GET", cr, nil)
+	if len(args) != 1 || (args)[0].Interface() != cr {
+		t.Fatal("expected 1 argument with value cr.  Actual:", args)
 	}
 }
 
 func TestGetArgumentForDelete(t *testing.T) {
-	args := getRequestArguments("DELETE", &ControllerRequest{ControllerFilter: "1234"}, "1234")
-	if len(args) != 2 || (args)[1].String() != "1234" {
-		t.Fatal("expected 2 argument with first equal 1234.  Actual:", args)
+	cr := &ControllerRequest{ItemID: "1234"}
+	args := getRequestArguments("DELETE", cr, nil)
+	if len(args) != 1 || (args)[0].Interface() != cr {
+		t.Fatal("expected 1 argument with value cr.  Actual:", args)
 	}
 }
 
 func TestGetArgumentForPut(t *testing.T) {
-	args := getRequestArguments("PUT", &ControllerRequest{ControllerFilter: "1234"}, &SimpleData{Hello: "there"})
-	if len(args) != 3 || (args)[1].String() != "1234" || (args)[2].Interface().(*SimpleData).Hello != "there" {
-		t.Fatal("expected 2 arguments with first equal 1234 and second a map.  Actual:", args)
+	cr := &ControllerRequest{ItemID: "1234"}
+	data := &SimpleData{Hello: "there"}
+	args := getRequestArguments("PUT", cr, data)
+	if len(args) != 2 || (args)[0].Interface() != cr || (args)[1].Interface() != data {
+		t.Fatal("expected 2 arguments [cr, data].  Actual:", args)
 	}
 }
 
@@ -202,23 +208,33 @@ func TestGetArgumentInvalid(t *testing.T) {
 	}
 }
 
-func TestCheckRuntimeArgumentsSuccess(t *testing.T) {
-	router := getMockRouter()
-	cr := &ControllerRequest{ControllerName: "Tests", ControllerFilter: "1234"}
-	args := []reflect.Value{reflect.ValueOf(cr), reflect.ValueOf("1234"), reflect.ValueOf(&SimpleData{})}
-	err := checkRuntimeArguments(router.getMethod("Projects", "Put"), args, "Put", "PUT", cr)
+func TestCheckUrl(t *testing.T) {
+	// success
+	cr := &ControllerRequest{ControllerName: "Tests", ItemID: "1234", ActionFilter: "Me"}
+	err := checkUrl("PUT", "PutMe", cr)
 	if err != nil {
-		t.Fatal("Expected to have success")
+		t.Error("Expected to have success")
 	}
-}
 
-func TestCheckRuntimeArgumentsFail(t *testing.T) {
-	router := getMockRouter()
-	req := &ControllerRequest{ControllerName: "Tests", ControllerFilter: "1234"}
-	args := []reflect.Value{reflect.ValueOf(req), reflect.ValueOf("1234")}
-	err := checkRuntimeArguments(router.getMethod("Projects", "Put"), args, "Put", "PUT", req)
-	if err == nil || err.Error() != "Invalid Url to call method: \"Put\"" {
-		t.Fatal("Expected to have Invalid Url error: ", err)
+	// Get without id
+	cr = &ControllerRequest{ControllerName: "Tests", Action: "Me"}
+	err = checkUrl("GET", "GetMe", cr)
+	if err == nil || err.Error() != "Malformed URL. Expected: /Tests/{id}/Me/{optional filter}" {
+		t.Error("Expected to have success", err)
+	}
+
+	// Post with ID
+	cr = &ControllerRequest{ControllerName: "Tests", ItemID: "1234"}
+	err = checkUrl("POST", "Post", cr)
+	if err == nil || err.Error() != "Malformed URL. Expected: /Tests" {
+		t.Error("Expected to have Invalid Url error: ", err)
+	}
+
+	// Post without ID but with action
+	cr = &ControllerRequest{ControllerName: "Tests", Action: "Me"}
+	err = checkUrl("POST", "PostMe", cr)
+	if err == nil || err.Error() != "Malformed URL. Expected: /Tests/{id}/Me/{optional filter}" {
+		t.Error("Expected to have Invalid Url error: ", err)
 	}
 }
 
@@ -232,7 +248,7 @@ func TestCallControllerMethod(t *testing.T) {
 
 func TestCallControllerMethodWithError(t *testing.T) {
 	method := reflect.ValueOf(&MockController{}).MethodByName("GetError")
-	_, err := callControllerMethod(&method, []reflect.Value{reflect.ValueOf(&ControllerRequest{}), reflect.ValueOf("1234")})
+	_, err := callControllerMethod(&method, []reflect.Value{reflect.ValueOf(&ControllerRequest{})})
 	if err == nil || err.Error() != "failed" {
 		t.Fatal("Expected error return from method", err)
 	}
@@ -257,8 +273,8 @@ func TestHttpHandlerMethodNotFound(t *testing.T) {
 func TestHttpHandlerGetMethod(t *testing.T) {
 	rw := httptest.NewRecorder()
 	getMockRouter().controllerRoutingHandler(rw, &http.Request{URL: &url.URL{Path: "/projects/123/method"}, Method: "GET"})
-	if rw.Body.String() != "called GetMethod" {
-		t.Fatal("expected to be able to call GetMethod method")
+	if body := rw.Body.String(); body != "called GetMethod" {
+		t.Fatal("expected to be able to call GetMethod method", body)
 	}
 }
 
@@ -281,8 +297,8 @@ func TestHttpHandlerCantGetJson(t *testing.T) {
 func TestHttpHandlerInvalidArguments(t *testing.T) {
 	rw := httptest.NewRecorder()
 	getMockRouter().controllerRoutingHandler(rw, &http.Request{URL: &url.URL{Path: "/projects"}, Method: "PUT", Body: ioutil.NopCloser(bytes.NewBufferString(`{ "hello": "there" }`))})
-	if rw.Body.String() != "Invalid Url to call method: \"Put\"\n" {
-		t.Fatal("should've gotten bogus arguments: ", rw.Body.String())
+	if body := rw.Body.String(); body != "Malformed URL. Expected: /Projects/{id}\n" {
+		t.Fatal("should've gotten bogus arguments: ", body)
 	}
 }
 

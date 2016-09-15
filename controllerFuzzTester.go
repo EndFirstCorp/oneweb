@@ -72,8 +72,6 @@ func getArgs(method reflect.Value) []reflect.Value {
 	args := make([]reflect.Value, numArgs, numArgs)
 	for i := 0; i < numArgs; i++ {
 		switch methodType.In(i).Kind() {
-		case reflect.String:
-			args[i] = reflect.ValueOf("1234")
 		case reflect.Ptr:
 			myType := methodType.In(i)
 			item := reflect.New(myType.Elem())

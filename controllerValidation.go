@@ -1,7 +1,7 @@
 package oneweb
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -19,11 +19,11 @@ func isRawMethod(methodType reflect.Type) bool {
 func validateMethod(method reflect.Value, methodName string) (httpVerb string, action string, err error) {
 	httpVerb, action = parseMethod(methodName)
 	if httpVerb == "" {
-		return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Unsupported http verb: \"" + httpVerb + "\"")
+		return httpVerb, action, fmt.Errorf("Method \"%s\" error: Unsupported http verb: \"%s\"", methodName, httpVerb)
 	}
 
 	if !method.IsValid() {
-		return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Internal error validating method")
+		return httpVerb, action, fmt.Errorf("Method \"%s\" error: Internal error validating method", methodName)
 	}
 
 	methodType := method.Type()
@@ -32,36 +32,21 @@ func validateMethod(method reflect.Value, methodName string) (httpVerb string, a
 	}
 
 	if !isJSONReturnArgs(methodType) {
-		return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Unsupported return type.  Expected (string, error)")
+		return httpVerb, action, fmt.Errorf("Method \"%s\" error: Unsupported return type.  Expected (string, error)", methodName)
 	}
 
 	numIn := methodType.NumIn()
-	if numIn >= 5 {
-		return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Invalid number of input arguments.  Expected 4 or fewer")
-	}
-
-	validID := isValidID(methodType, numIn, httpVerb)
-	validAction := isValidAction(methodType, numIn, httpVerb)
-
-	if action != "" && !validAction {
-		if httpVerb == "Post" || httpVerb == "Put" {
-			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires either 3 or 4 input args (cr *ControllerRequest, id string, actionFilter string [optional], json *YourStruct or []YourStruct)")
-		} else if httpVerb == "Get" || httpVerb == "Delete" {
-			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires either 2 or 3 input args (cr *ControllerRequest, id string, actionFilter string [optional])")
+	switch httpVerb {
+	case "Index", "Get", "Delete":
+		if numIn != 1 || (numIn == 1 && !isControllerRequestArg(methodType.In(0))) { // only ControllerRequest
+			return httpVerb, action, fmt.Errorf("Method \"%s\" error: Requires 1 input arg (cr *ControllerRequest)", methodName)
 		}
-	} else if action == "" {
-		if httpVerb == "Post" && numIn == 2 && !isJSONReceiverArg(methodType.In(0)) {
-			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 2 input arg (cr *ControllerRequest, json *YourStruct or []YourStruct)")
-		} else if httpVerb == "Post" && numIn == 3 && !validID {
-			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 3 input args (cr *ControllerRequest, id string, json *YourStruct or []YourStruct)")
-		} else if (httpVerb == "Get" || httpVerb == "Delete") && !validID {
-			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 2 input arg (cr *ControllerRequest, id string)")
-		} else if httpVerb == "Put" && !validID {
-			return httpVerb, action, errors.New("Method \"" + methodName + "\" error: Requires 3 input args (cr *ControllerRequest, id string, json *YourStruct or []YourStruct))")
-		} else if httpVerb == "Index" && numIn != 1 {
-			return httpVerb, action, errors.New("Method \"Index\" requires 0 input args")
+	case "Post", "Put":
+		if numIn != 2 || (numIn == 2 && (!isControllerRequestArg(methodType.In(0)) || !isJSONReceiverArg(methodType.In(1)))) {
+			return httpVerb, action, fmt.Errorf("Method \"%s\" error: Requires 2 input args (cr *ControllerRequest, json *YourStruct or []YourStruct)", methodName)
 		}
 	}
+
 	return httpVerb, action, nil
 }
 
@@ -73,22 +58,6 @@ func parseMethod(methodName string) (string, string) {
 		}
 	}
 	return "", ""
-}
-
-func isValidID(methodType reflect.Type, numIn int, httpVerb string) bool {
-	// if there is only an id then you need 2 arg + json
-	return numIn > 1 && isStringArg(methodType.In(1)) &&
-		(httpVerb == "Get" || httpVerb == "Delete") ||
-		numIn == 3 && httpVerb == "Put" && isJSONReceiverArg(methodType.In(2))
-}
-
-func isValidAction(methodType reflect.Type, numIn int, httpVerb string) bool {
-	// if there is a controller action then you need either 2 or 3 args + json
-	return numIn > 1 && isStringArg(methodType.In(1)) &&
-		(numIn == 2 && (httpVerb == "Get" || httpVerb == "Delete") ||
-			numIn == 3 && (httpVerb == "Get" || httpVerb == "Delete") && isStringArg(methodType.In(2)) ||
-			numIn == 3 && (httpVerb == "Post" || httpVerb == "Put") && isJSONReceiverArg(methodType.In(2)) ||
-			numIn == 4 && (httpVerb == "Post" || httpVerb == "Put") && isStringArg(methodType.In(2)) && isJSONReceiverArg(methodType.In(3)))
 }
 
 func isJSONReturnArgs(methodType reflect.Type) bool {
@@ -109,6 +78,10 @@ func isPointer(item reflect.Type) bool {
 
 func isSlice(item reflect.Type) bool {
 	return item.Kind() == reflect.Slice
+}
+
+func isControllerRequestArg(argType reflect.Type) bool {
+	return argType == reflect.TypeOf(&ControllerRequest{})
 }
 
 func isJSONReceiverArg(argType reflect.Type) bool {

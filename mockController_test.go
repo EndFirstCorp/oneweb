@@ -13,35 +13,39 @@ func (c *MockController) Index(cr *ControllerRequest) (string, error) {
 	return "called Index", nil
 }
 
-func (c *MockController) Get(cr *ControllerRequest, id string) (string, error) {
+func (c *MockController) Get(cr *ControllerRequest) (string, error) {
 	return "called Get", nil
 }
 
-func (c *MockController) GetMethod(cr *ControllerRequest, id string) (string, error) {
+func (c *MockController) GetMethod(cr *ControllerRequest) (string, error) {
 	return "called GetMethod", nil
 }
 
-func (c *MockController) GetError(cr *ControllerRequest, id string) (string, error) {
+func (c *MockController) GetError(cr *ControllerRequest) (string, error) {
 	return "called GetError", errors.New("failed")
 }
 
-func (c *MockController) GetWrongReturnType(cr *ControllerRequest, id string) (int, error) {
+func (c *MockController) GetWrongReturnType(cr *ControllerRequest) (int, error) {
 	return 1, nil
 }
 
-func (c *MockController) GetTooFewReturns(cr *ControllerRequest, id string) int {
+func (c *MockController) GetTooFewReturns(cr *ControllerRequest) int {
 	return 1
 }
 
-func (c *MockController) Put(cr *ControllerRequest, id string, data *SimpleData) (string, error) {
+func (c *MockController) Put(cr *ControllerRequest, data *SimpleData) (string, error) {
 	return "Called Put with value " + data.Hello, nil
 }
 
-func (c *MockController) PutValid(cr *ControllerRequest, id string, data []SimpleData) (string, error) {
+func (c *MockController) PutValid(cr *ControllerRequest, data []SimpleData) (string, error) {
 	return fmt.Sprintf("Called PutValid %v", len(data)), nil
 }
 
-func (c *MockController) PutBogus(cr *ControllerRequest, id int) (string, error) {
+func (c *MockController) PutBogus(cr *ControllerRequest) (string, error) {
+	return "", nil
+}
+
+func (c *MockController) GetBogus(id string) (string, error) {
 	return "", nil
 }
 

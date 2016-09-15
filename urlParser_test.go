@@ -10,22 +10,22 @@ func TestParseUrl(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/members", nil)
 	r.Header.Add("X-User-Id", "1")
 	req := newControllerRequest(r)
-	if req.ControllerName != "Members" || req.ControllerFilter != "" || req.Action != "" || req.UserID != 1 || req.HalfAuthID != -1 {
-		t.Fatal("expected controller Members with empty filter and Query.  Actual", req.ControllerName, req.ControllerFilter, req.Action, req.UserID, req.HalfAuthID)
+	if req.ControllerName != "Members" || req.ItemID != "" || req.Action != "" || req.UserID != 1 || req.HalfAuthID != -1 {
+		t.Fatal("expected controller Members with empty filter and Query.  Actual", req.ControllerName, req.ItemID, req.Action, req.UserID, req.HalfAuthID)
 	}
 }
 
 func TestParseUrlMoreParts(t *testing.T) {
 	req := newControllerRequest(&http.Request{URL: &url.URL{Path: "/members/23/doSomething"}})
-	if req.ControllerName != "Members" || req.ControllerFilter != "23" || req.Action != "Dosomething" {
-		t.Fatal("expected controller Members filter 23 and Query Dosomething.  Actual", req.ControllerName, req.ControllerFilter, req.Action)
+	if req.ControllerName != "Members" || req.ItemID != "23" || req.Action != "Dosomething" {
+		t.Fatal("expected controller Members filter 23 and Query Dosomething.  Actual", req.ControllerName, req.ItemID, req.Action)
 	}
 }
 
 func TestParseUrlAllParts(t *testing.T) {
 	req := newControllerRequest(&http.Request{URL: &url.URL{Path: "/members/23/doSomething/5"}})
-	if req.ControllerName != "Members" || req.ControllerFilter != "23" || req.Action != "Dosomething" || req.ActionFilter != "5" {
-		t.Fatal("expected controller Members filter 23, Query Dosomething, QueryFilter 5.  Actual", req.ControllerName, req.ControllerFilter, req.Action, req.ActionFilter)
+	if req.ControllerName != "Members" || req.ItemID != "23" || req.Action != "Dosomething" || req.ActionFilter != "5" {
+		t.Fatal("expected controller Members filter 23, Query Dosomething, QueryFilter 5.  Actual", req.ControllerName, req.ItemID, req.Action, req.ActionFilter)
 	}
 }
 

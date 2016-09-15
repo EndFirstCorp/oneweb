@@ -30,8 +30,13 @@ func (c *ControllerRoutingHandler) Handler() http.Handler {
 
 func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWriter, r *http.Request) {
 	cr := newControllerRequest(r)
-
 	methodName := getMethodName(r.Method, cr)
+	err := checkUrl(r.Method, methodName, cr)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	method := c.getMethod(cr.ControllerName, methodName)
 	if method == nil {
 		http.Error(rw, "Method \""+methodName+"\" not found", http.StatusInternalServerError)
@@ -50,12 +55,6 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	}
 
 	arguments := getRequestArguments(r.Method, cr, json)
-	err = checkRuntimeArguments(method, arguments, methodName, r.Method, cr)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	retVal, err := callControllerMethod(method, arguments)
 	if err != nil {
 		http.Error(rw, "Internal error calling controller method: "+err.Error(), http.StatusInternalServerError)
@@ -88,9 +87,30 @@ func writeResponse(rw http.ResponseWriter, json string) {
 	fmt.Fprintf(rw, json)
 }
 
+func checkUrl(httpVerb, methodName string, cr *ControllerRequest) error {
+	if methodName == "Index" {
+		return nil
+	}
+	switch httpVerb {
+	case "GET", "DELETE", "PUT": // always expect the id (controllerFilter) to be present
+		if cr.ItemID == "" && cr.Action == "" {
+			return fmt.Errorf("Malformed URL. Expected: /%s/{id}", cr.ControllerName)
+		} else if cr.ItemID == "" {
+			return fmt.Errorf("Malformed URL. Expected: /%s/{id}/%s/{optional filter}", cr.ControllerName, cr.Action)
+		}
+	case "POST":
+		if cr.ItemID != "" && cr.Action == "" {
+			return fmt.Errorf("Malformed URL. Expected: /%s", cr.ControllerName)
+		} else if cr.ItemID == "" && cr.Action != "" {
+			return fmt.Errorf("Malformed URL. Expected: /%s/{id}/%s/{optional filter}", cr.ControllerName, cr.Action)
+		}
+	}
+	return nil
+}
+
 func getMethodName(httpVerb string, cr *ControllerRequest) string {
 	methodName := strings.Title(strings.ToLower(httpVerb))
-	if methodName == "Get" && cr.ControllerFilter == "" {
+	if methodName == "Get" && cr.ItemID == "" && cr.Action == "" && cr.ActionFilter == "" {
 		methodName = "Index"
 	}
 
@@ -129,14 +149,7 @@ func getJSONBody(r *http.Request, method *reflect.Value) (interface{}, error) {
 }
 
 func getRequestArguments(httpVerb string, cr *ControllerRequest, json interface{}) []reflect.Value {
-	var args []reflect.Value
-	if cr.ControllerFilter == "" {
-		args = []reflect.Value{reflect.ValueOf(cr)}
-	} else if cr.ActionFilter == "" {
-		args = []reflect.Value{reflect.ValueOf(cr), reflect.ValueOf(cr.ControllerFilter)}
-	} else {
-		args = []reflect.Value{reflect.ValueOf(cr), reflect.ValueOf(cr.ControllerFilter), reflect.ValueOf(cr.ActionFilter)}
-	}
+	args := []reflect.Value{reflect.ValueOf(cr)}
 	if httpVerb == "PUT" || httpVerb == "POST" {
 		args = append(args, reflect.ValueOf(json))
 	}
@@ -146,26 +159,6 @@ func getRequestArguments(httpVerb string, cr *ControllerRequest, json interface{
 func callRawMethod(cr *ControllerRequest, method *reflect.Value, rw http.ResponseWriter, r *http.Request) {
 	method.Call([]reflect.Value{reflect.ValueOf(cr), reflect.ValueOf(rw), reflect.ValueOf(r)})
 }
-
-func checkRuntimeArguments(method *reflect.Value, arguments []reflect.Value, methodName string, httpVerb string, cr *ControllerRequest) error {
-	methodType := method.Type()
-	numIn := methodType.NumIn()
-
-	if len(arguments) != numIn {
-		return errors.New("Invalid Url to call method: \"" + methodName + "\"")
-	}
-	return nil
-}
-
-/*func getValidUrl(numIn int, httpVerb string, cr *ControllerRequest) string {
-	if numIn == 1 && httpVerb == "POST" {
-		return cr.ControllerName
-	} else if numIn == 1 && httpVerb != "POST" || numIn == 2 && httpVerb == "PUT" {
-		return cr.ControllerName + "/{id}"
-	} else {
-		return cr.ControllerName + "/{id}/" + cr.Action + "/{filter}"
-	}
-}*/
 
 func callControllerMethod(method *reflect.Value, arguments []reflect.Value) (string, error) {
 	ret := method.Call(arguments)
