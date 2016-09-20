@@ -66,11 +66,15 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 
 func (c *ControllerRoutingHandler) addValidControllerMethods(controller interface{}, controllerName string) error {
 	controllerValue := reflect.ValueOf(controller)
+	controllerType := controllerValue.Type()
 	numMethod := controllerValue.NumMethod()
 	var errMsg string
 	for i := 0; i < numMethod; i++ {
+		methodName := controllerType.Method(i).Name
+		if strings.ToLower(methodName[:1]) == methodName[:1] { // private method (lowercase first letter), so skip
+			continue
+		}
 		method := controllerValue.Method(i)
-		methodName := controllerValue.Type().Method(i).Name
 		httpVerb, action, err := validateMethod(method, methodName)
 		if err != nil {
 			errMsg += err.Error() + "\n"

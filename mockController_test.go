@@ -60,3 +60,7 @@ func (c *MockController) Post(cr *ControllerRequest, rw http.ResponseWriter, r *
 func (c *MockController) Bogus(cr *ControllerRequest, id string) (string, error) {
 	return "", nil
 }
+
+func (c *MockController) privateMethod(cr *ControllerRequest) (string, error) {
+	return "called privateMethod", nil
+}
