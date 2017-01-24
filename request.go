@@ -1,22 +1,35 @@
 package oneweb
 
 import (
+	"encoding/json"
+	"github.com/pkg/errors"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
-type ControllerRequest struct {
+type user struct {
+	UserID   int
+	Email    string
+	FullName string
+	JSON     string
+}
+
+type controllerRequest struct {
 	ControllerName string
 	ItemID         string
 	Action         string
 	ActionFilter   string
-	UserID         int
-	HalfAuthID     int
+	User           *user
 }
 
-func newControllerRequest(r *http.Request) *ControllerRequest {
-	halfAuthID, userID := getUserIDs(r)
+func newControllerRequest(r *http.Request) (*controllerRequest, error) {
+	userJSON := r.Header.Get("X-User")
+	user := &user{}
+	err := json.Unmarshal([]byte(userJSON), user)
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to retrieve user information. Unauthorized")
+	}
+	user.JSON = userJSON
 	urlPath := removeTrailingSlash(r.URL.Path)
 	urlParams := strings.Split(urlPath, "/")
 	controllerName := strings.Title(strings.ToLower(urlParams[1]))
@@ -34,7 +47,7 @@ func newControllerRequest(r *http.Request) *ControllerRequest {
 	if len(urlParams) >= 5 {
 		actionFilter = urlParams[4]
 	}
-	return &ControllerRequest{controllerName, controllerFilter, action, actionFilter, userID, halfAuthID}
+	return &controllerRequest{controllerName, controllerFilter, action, actionFilter, user}, nil
 }
 
 func removeTrailingSlash(urlPath string) string {
@@ -43,16 +56,4 @@ func removeTrailingSlash(urlPath string) string {
 	}
 	return urlPath
 
-}
-
-func getUserIDs(r *http.Request) (int, int) {
-	var halfAuthID, userID int
-	var err error
-	if halfAuthID, err = strconv.Atoi(r.Header.Get("X-Half-Auth-User-Id")); err != nil {
-		halfAuthID = -1
-	}
-	if userID, err = strconv.Atoi(r.Header.Get("X-User-Id")); err != nil {
-		userID = -1
-	}
-	return halfAuthID, userID
 }

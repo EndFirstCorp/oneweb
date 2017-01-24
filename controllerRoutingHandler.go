@@ -2,8 +2,8 @@ package oneweb
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -29,9 +29,14 @@ func (c *ControllerRoutingHandler) Handler() http.Handler {
 }
 
 func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWriter, r *http.Request) {
-	cr := newControllerRequest(r)
+	cr, err := newControllerRequest(r)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	methodName := getMethodName(r.Method, cr)
-	err := checkUrl(r.Method, methodName, cr)
+	err = checkUrl(r.Method, methodName, cr)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,7 +96,7 @@ func writeResponse(rw http.ResponseWriter, json string) {
 	fmt.Fprintf(rw, json)
 }
 
-func checkUrl(httpVerb, methodName string, cr *ControllerRequest) error {
+func checkUrl(httpVerb, methodName string, cr *controllerRequest) error {
 	if methodName == "Index" {
 		return nil
 	}
@@ -112,7 +117,7 @@ func checkUrl(httpVerb, methodName string, cr *ControllerRequest) error {
 	return nil
 }
 
-func getMethodName(httpVerb string, cr *ControllerRequest) string {
+func getMethodName(httpVerb string, cr *controllerRequest) string {
 	methodName := strings.Title(strings.ToLower(httpVerb))
 	if methodName == "Get" && cr.ItemID == "" && cr.Action == "" && cr.ActionFilter == "" {
 		methodName = "Index"
@@ -152,7 +157,7 @@ func getJSONBody(r *http.Request, method *reflect.Value) (interface{}, error) {
 	return nil, nil
 }
 
-func getRequestArguments(httpVerb string, cr *ControllerRequest, json interface{}) []reflect.Value {
+func getRequestArguments(httpVerb string, cr *controllerRequest, json interface{}) []reflect.Value {
 	args := []reflect.Value{reflect.ValueOf(cr)}
 	if httpVerb == "PUT" || httpVerb == "POST" {
 		args = append(args, reflect.ValueOf(json))
@@ -160,7 +165,7 @@ func getRequestArguments(httpVerb string, cr *ControllerRequest, json interface{
 	return args
 }
 
-func callRawMethod(cr *ControllerRequest, method *reflect.Value, rw http.ResponseWriter, r *http.Request) {
+func callRawMethod(cr *controllerRequest, method *reflect.Value, rw http.ResponseWriter, r *http.Request) {
 	method.Call([]reflect.Value{reflect.ValueOf(cr), reflect.ValueOf(rw), reflect.ValueOf(r)})
 }
 
