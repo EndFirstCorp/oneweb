@@ -92,7 +92,7 @@ func TestFuzzTestControllerMethodPutValid(t *testing.T) {
 
 func TestFuzzTestControllerMethodPutBogus(t *testing.T) {
 	result := fuzzTestControllerMethod(&MockController{}, "PutBogus")
-	if result.MethodName != "PutBogus" || result.ValidationError.Error() != "Method \"PutBogus\" error: Requires 2 input args (cr *controllerRequest, json *YourStruct or []YourStruct)" || len(result.ReturnData) != 0 {
+	if result.MethodName != "PutBogus" || result.ValidationError.Error() != "Method \"PutBogus\" error: Requires 2 input args (cr *ControllerRequest, json *YourStruct or []YourStruct)" || len(result.ReturnData) != 0 {
 		t.Error("Problems with PutBogus", result)
 	}
 }

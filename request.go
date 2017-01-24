@@ -14,7 +14,7 @@ type user struct {
 	JSON     string
 }
 
-type controllerRequest struct {
+type ControllerRequest struct {
 	ControllerName string
 	ItemID         string
 	Action         string
@@ -22,7 +22,7 @@ type controllerRequest struct {
 	User           *user
 }
 
-func newControllerRequest(r *http.Request) (*controllerRequest, error) {
+func newControllerRequest(r *http.Request) (*ControllerRequest, error) {
 	userJSON := r.Header.Get("X-User")
 	user := &user{}
 	err := json.Unmarshal([]byte(userJSON), user)
@@ -47,7 +47,7 @@ func newControllerRequest(r *http.Request) (*controllerRequest, error) {
 	if len(urlParams) >= 5 {
 		actionFilter = urlParams[4]
 	}
-	return &controllerRequest{controllerName, controllerFilter, action, actionFilter, user}, nil
+	return &ControllerRequest{controllerName, controllerFilter, action, actionFilter, user}, nil
 }
 
 func removeTrailingSlash(urlPath string) string {

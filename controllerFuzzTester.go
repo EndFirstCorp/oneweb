@@ -58,7 +58,7 @@ func testControllerMethod(controllerValue reflect.Value, methodName string) Meth
 func callMethod(method reflect.Value) []reflect.Value {
 	if isRawMethod(method.Type()) {
 		writer := httptest.NewRecorder()
-		args := []reflect.Value{reflect.ValueOf(&controllerRequest{}), reflect.ValueOf(writer), reflect.ValueOf(&http.Request{})}
+		args := []reflect.Value{reflect.ValueOf(&ControllerRequest{}), reflect.ValueOf(writer), reflect.ValueOf(&http.Request{})}
 		method.Call(args)
 		return []reflect.Value{reflect.ValueOf(writer.Body.String())}
 	}

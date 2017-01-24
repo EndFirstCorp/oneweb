@@ -11,7 +11,7 @@ func isRawMethod(methodType reflect.Type) bool {
 	numOut := methodType.NumOut()
 	numIn := methodType.NumIn()
 	return numIn == 3 && numOut == 0 &&
-		methodType.In(0) == reflect.TypeOf((*controllerRequest)(nil)) &&
+		methodType.In(0) == reflect.TypeOf((*ControllerRequest)(nil)) &&
 		methodType.In(1) == reflect.TypeOf((*http.ResponseWriter)(nil)).Elem() &&
 		methodType.In(2) == reflect.TypeOf((*http.Request)(nil))
 }
@@ -38,12 +38,12 @@ func validateMethod(method reflect.Value, methodName string) (httpVerb string, a
 	numIn := methodType.NumIn()
 	switch httpVerb {
 	case "Index", "Get", "Delete":
-		if numIn != 1 || (numIn == 1 && !iscontrollerRequestArg(methodType.In(0))) { // only controllerRequest
-			return httpVerb, action, fmt.Errorf("Method \"%s\" error: Requires 1 input arg (cr *controllerRequest)", methodName)
+		if numIn != 1 || (numIn == 1 && !isControllerRequestArg(methodType.In(0))) { // only ControllerRequest
+			return httpVerb, action, fmt.Errorf("Method \"%s\" error: Requires 1 input arg (cr *ControllerRequest)", methodName)
 		}
 	case "Post", "Put":
-		if numIn != 2 || (numIn == 2 && (!iscontrollerRequestArg(methodType.In(0)) || !isJSONReceiverArg(methodType.In(1)))) {
-			return httpVerb, action, fmt.Errorf("Method \"%s\" error: Requires 2 input args (cr *controllerRequest, json *YourStruct or []YourStruct)", methodName)
+		if numIn != 2 || (numIn == 2 && (!isControllerRequestArg(methodType.In(0)) || !isJSONReceiverArg(methodType.In(1)))) {
+			return httpVerb, action, fmt.Errorf("Method \"%s\" error: Requires 2 input args (cr *ControllerRequest, json *YourStruct or []YourStruct)", methodName)
 		}
 	}
 
@@ -80,8 +80,8 @@ func isSlice(item reflect.Type) bool {
 	return item.Kind() == reflect.Slice
 }
 
-func iscontrollerRequestArg(argType reflect.Type) bool {
-	return argType == reflect.TypeOf(&controllerRequest{})
+func isControllerRequestArg(argType reflect.Type) bool {
+	return argType == reflect.TypeOf(&ControllerRequest{})
 }
 
 func isJSONReceiverArg(argType reflect.Type) bool {
