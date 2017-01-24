@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type user struct {
+type User struct {
 	UserID   int
 	Email    string
 	FullName string
@@ -19,12 +19,12 @@ type ControllerRequest struct {
 	ItemID         string
 	Action         string
 	ActionFilter   string
-	User           *user
+	User           *User
 }
 
 func newControllerRequest(r *http.Request) (*ControllerRequest, error) {
 	userJSON := r.Header.Get("X-User")
-	user := &user{}
+	user := &User{}
 	err := json.Unmarshal([]byte(userJSON), user)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to retrieve user information. Unauthorized")
