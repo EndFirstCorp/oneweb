@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -29,9 +30,11 @@ func (c *ControllerRoutingHandler) Handler() http.Handler {
 }
 
 func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWriter, r *http.Request) {
+	log.Println("controllerRoutingHandler: ", r.Method, r.URL.Path)
 	cr, err := newControllerRequest(r)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		log.Println("controllerRoutingHandler: ", r.Method, r.URL.Path, err)
 		return
 	}
 
@@ -45,6 +48,7 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	method := c.getMethod(cr.ControllerName, methodName)
 	if method == nil {
 		http.Error(rw, "Method \""+methodName+"\" not found", http.StatusInternalServerError)
+		log.Println("controllerRoutingHandler: ", r.Method, r.URL.Path, err)
 		return
 	}
 
@@ -56,6 +60,7 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	json, err := getJSONBody(r, method)
 	if err != nil {
 		http.Error(rw, "Failed to read JSON data: "+err.Error(), http.StatusInternalServerError)
+		log.Println("controllerRoutingHandler: ", r.Method, r.URL.Path, err)
 		return
 	}
 
@@ -63,10 +68,12 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	retVal, err := callControllerMethod(method, arguments)
 	if err != nil {
 		http.Error(rw, "Internal error calling controller method: "+err.Error(), http.StatusInternalServerError)
+		log.Println("controllerRoutingHandler: ", r.Method, r.URL.Path, err)
 		return
 	}
 
 	writeResponse(rw, retVal)
+	log.Println("controllerRoutingHandler success: ", r.Method, r.URL.Path)
 }
 
 func (c *ControllerRoutingHandler) addValidControllerMethods(controller interface{}, controllerName string) error {
