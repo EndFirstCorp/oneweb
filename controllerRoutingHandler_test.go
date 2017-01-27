@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -12,7 +13,14 @@ import (
 	"testing"
 )
 
+type nilWriter struct{}
+
+func (w *nilWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
 func getMockRouter() *ControllerRoutingHandler {
+	log.SetOutput(&nilWriter{})
 	router := NewControllerRoutingHandler()
 	router.RegisterController("projects", &MockController{})
 	return router
