@@ -32,11 +32,10 @@ func (c *ControllerRoutingHandler) Handler() http.Handler {
 
 func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	log.Println("controllerRoutingHandler begin:  ", r.Method, r.URL.Path)
 	cr, err := newControllerRequest(r)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		log.Println("controllerRoutingHandler error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
+		log.Println("Error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
 		return
 	}
 
@@ -50,7 +49,7 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	method := c.getMethod(cr.ControllerName, methodName)
 	if method == nil {
 		http.Error(rw, "Method \""+methodName+"\" not found", http.StatusInternalServerError)
-		log.Println("controllerRoutingHandler error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
+		log.Println("Error:  ", r.Method, r.URL.Path, time.Since(startTime), "Method \""+methodName+"\" not found")
 		return
 	}
 
@@ -62,7 +61,7 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	json, err := getJSONBody(r, method)
 	if err != nil {
 		http.Error(rw, "Failed to read JSON data: "+err.Error(), http.StatusInternalServerError)
-		log.Println("controllerRoutingHandler error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
+		log.Println("Error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
 		return
 	}
 
@@ -70,12 +69,11 @@ func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWrit
 	retVal, err := callControllerMethod(method, arguments)
 	if err != nil {
 		http.Error(rw, "Internal error calling controller method: "+err.Error(), http.StatusInternalServerError)
-		log.Println("controllerRoutingHandler error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
+		log.Println("Error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
 		return
 	}
 
 	writeResponse(rw, retVal)
-	log.Println("controllerRoutingHandler success:", r.Method, r.URL.Path, time.Since(startTime))
 }
 
 func (c *ControllerRoutingHandler) addValidControllerMethods(controller interface{}, controllerName string) error {
