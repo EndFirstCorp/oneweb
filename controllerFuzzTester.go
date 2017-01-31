@@ -58,7 +58,7 @@ func testControllerMethod(controllerValue reflect.Value, methodName string) Meth
 func callMethod(method reflect.Value) []reflect.Value {
 	if isRawMethod(method.Type()) {
 		writer := httptest.NewRecorder()
-		args := []reflect.Value{reflect.ValueOf(&ControllerRequest{User: &User{UserID: 1}}), reflect.ValueOf(writer), reflect.ValueOf(&http.Request{})}
+		args := []reflect.Value{reflect.ValueOf(&ControllerRequest{User: &User{UserID: 1}, Headers: make(map[string]string)}), reflect.ValueOf(writer), reflect.ValueOf(&http.Request{})}
 		method.Call(args)
 		return []reflect.Value{reflect.ValueOf(writer.Body.String())}
 	}
@@ -74,7 +74,7 @@ func getArgs(method reflect.Value) []reflect.Value {
 		switch methodType.In(i).Kind() {
 		case reflect.Ptr:
 			if i == 0 {
-				args[i] = reflect.ValueOf(&ControllerRequest{User: &User{UserID: 1}})
+				args[i] = reflect.ValueOf(&ControllerRequest{User: &User{UserID: 1}, Headers: make(map[string]string)})
 				continue
 			}
 			myType := methodType.In(i)

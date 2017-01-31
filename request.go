@@ -20,16 +20,17 @@ type ControllerRequest struct {
 	Action         string
 	ActionFilter   string
 	User           *User
+	Headers        map[string]string
 }
 
 func newControllerRequest(r *http.Request) (*ControllerRequest, error) {
-	userJSON := r.Header.Get("X-User")
-	user := &User{}
-	err := json.Unmarshal([]byte(userJSON), user)
-	if err != nil {
-		return nil, errors.Wrap(err, "Unable to retrieve user information. Unauthorized")
+	headers := make(map[string]string)
+	for key, value := range r.Header {
+		if len(value) != 0 {
+			headers[key] = value[0]
+		}
 	}
-	user.JSON = userJSON
+
 	urlPath := removeTrailingSlash(r.URL.Path)
 	urlParams := strings.Split(urlPath, "/")
 	controllerName := strings.Title(strings.ToLower(urlParams[1]))
@@ -47,7 +48,16 @@ func newControllerRequest(r *http.Request) (*ControllerRequest, error) {
 	if len(urlParams) >= 5 {
 		actionFilter = urlParams[4]
 	}
-	return &ControllerRequest{controllerName, controllerFilter, action, actionFilter, user}, nil
+
+	userJSON := r.Header.Get("X-User")
+	user := &User{}
+	err := json.Unmarshal([]byte(userJSON), user)
+	user.JSON = userJSON
+	cr := &ControllerRequest{controllerName, controllerFilter, action, actionFilter, user, headers}
+	if err != nil {
+		return cr, errors.Wrap(err, "Unable to retrieve user information. Unauthorized")
+	}
+	return cr, nil
 }
 
 func removeTrailingSlash(urlPath string) string {

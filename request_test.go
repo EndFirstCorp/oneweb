@@ -9,7 +9,7 @@ import (
 func TestParseUrl(t *testing.T) {
 	req, _ := newControllerRequest(newHttpRequest("GET", "/members", nil))
 	if req.ControllerName != "Members" || req.ItemID != "" || req.Action != "" || req.User == nil || req.User.Email != "test@test.com" {
-		t.Fatal("expected controller Members with empty filter and Query.  Actual", req.ControllerName, req.ItemID, req.Action, req.User)
+		t.Fatal("expected controller Members with empty filter and Query.  Actual", req.ControllerName, req.ItemID, req.Action, req.User, req.Headers)
 	}
 }
 
