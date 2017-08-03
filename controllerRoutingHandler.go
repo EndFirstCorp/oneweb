@@ -3,13 +3,14 @@ package oneweb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type ControllerRoutingHandler struct {
@@ -32,17 +33,12 @@ func (c *ControllerRoutingHandler) Handler() http.Handler {
 
 func (c *ControllerRoutingHandler) controllerRoutingHandler(rw http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	cr, err := newControllerRequest(r)
+	cr := newControllerRequest(r)
+	methodName := getMethodName(r.Method, cr)
+	err := checkUrl(r.Method, methodName, cr)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		log.Println("Error:  ", r.Method, r.URL.Path, time.Since(startTime), err)
-		return
-	}
-
-	methodName := getMethodName(r.Method, cr)
-	err = checkUrl(r.Method, methodName, cr)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

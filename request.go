@@ -2,7 +2,6 @@ package oneweb
 
 import (
 	"encoding/json"
-	"github.com/pkg/errors"
 	"net/http"
 	"strings"
 )
@@ -23,7 +22,7 @@ type ControllerRequest struct {
 	Headers        map[string]string
 }
 
-func newControllerRequest(r *http.Request) (*ControllerRequest, error) {
+func newControllerRequest(r *http.Request) *ControllerRequest {
 	headers := make(map[string]string)
 	for key, value := range r.Header {
 		if len(value) != 0 {
@@ -51,13 +50,9 @@ func newControllerRequest(r *http.Request) (*ControllerRequest, error) {
 
 	userJSON := r.Header.Get("X-User")
 	user := &User{}
-	err := json.Unmarshal([]byte(userJSON), user)
+	json.Unmarshal([]byte(userJSON), user)
 	user.JSON = userJSON
-	cr := &ControllerRequest{controllerName, controllerFilter, action, actionFilter, user, headers}
-	if err != nil {
-		return cr, errors.Wrap(err, "Unable to retrieve user information. Unauthorized")
-	}
-	return cr, nil
+	return &ControllerRequest{controllerName, controllerFilter, action, actionFilter, user, headers}
 }
 
 func removeTrailingSlash(urlPath string) string {
